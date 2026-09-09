@@ -12,7 +12,7 @@ from app.auth.routers import (
     refresh_router,
     set_passowrd_router,
 )
-from app.core import limiter, settings
+from app.core import settings
 
 app = FastAPI(
     title="CodifyLive",
@@ -26,7 +26,6 @@ app = FastAPI(
     },
 )
 
-app.state.limiter = limiter
 
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 

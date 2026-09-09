@@ -1,4 +1,4 @@
-from pydantic import SecretStr
+from pydantic import ConfigDict, SecretStr
 from pydantic_settings import BaseSettings
 
 
@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     GOOGLE_TOKEN_URL: str
     GOOGLE_SCOPES: str
     FRONTEND_URL: str
+    TEST_DATABASE_URL: str
 
     @property
     def refresh_token_max_age(self) -> int:
@@ -27,8 +28,7 @@ class Settings(BaseSettings):
     def origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.ORIGINS.split(",") if origin.strip()]
 
-    class Config:
-        env_file = ".env"
+    model_config = ConfigDict(env_file=".env")
 
 
 settings = Settings()
