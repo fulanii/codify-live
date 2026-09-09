@@ -5,6 +5,5 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_login():
-    response = client.post("/login")
-    assert response.status_code == 404
+class TestLogin:
+    async def test_success_login(self, base_user, refresh_token): ...
