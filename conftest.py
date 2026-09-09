@@ -1,4 +1,5 @@
 import os
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from dotenv import load_dotenv
@@ -105,3 +106,28 @@ async def authed_client(client, base_user):
     yield client
 
     app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.fixture
+async def refresh_token(base_user, db_session):
+    """
+    A valid refresh token for `base_user`
+    """
+
+    from app.auth.models import RefreshTokenModel
+    from app.core import create_refresh_token
+
+    refresh_token = create_refresh_token()
+
+    refresh_token_data = RefreshTokenModel(
+        user_id=base_user.id,
+        token_hash=refresh_token["stored"],
+        expires_at=datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+    )
+
+    db_session.add(refresh_token_data)
+
+    await db_session.commit()
+    await db_session.refresh(refresh_token_data)
+
+    return refresh_token_data
