@@ -69,8 +69,9 @@ async def google_callback(
     lands on a dedicated callback route rather than straight on the dashboard.
 
     ### 400 Bad Request
-    The same body for every failure — consent declined, no code, missing or
-    mismatched `state`, or Google rejecting the code exchange:
+    The same body for every failure — consent declined, no code, a missing
+    `state` cookie, a `state` that does not match, or Google rejecting the code
+    exchange:
 
     ```json
     {
@@ -91,12 +92,19 @@ async def google_callback(
     ---
 
     ## Callback Flow
-    1. Reject the request unless a `code` and a `state` cookie are both present.
-    2. Exchange the code for the user's identity in a direct server-to-server
+    1. Reject the request unless Google sent a `code` and a `state`, and the
+        browser sent back the `state` cookie. Each is checked separately: a
+        missing cookie has to fail here rather than reach the comparison below,
+        which raises on `None` rather than returning False.
+    2. Compare the two `state` values in constant time. They match only if this
+        browser is the one that started the flow, which is what stops an attacker
+        from feeding a victim a callback URL carrying their own `code` and
+        silently signing the victim into the attacker's account.
+    3. Exchange the code for the user's identity in a direct server-to-server
         call carrying the client secret. The browser never sees it.
-    3. Look up the user by verified email, creating the account on first sign-in.
-    4. Mint an opaque refresh token, store its SHA-256 hash, and commit.
-    5. Redirect to the frontend with the refresh cookie set and `state` cleared.
+    4. Look up the user by verified email, creating the account on first sign-in.
+    5. Mint an opaque refresh token, store its SHA-256 hash, and commit.
+    6. Redirect to the frontend with the refresh cookie set and `state` cleared.
 
     ---
 
@@ -105,10 +113,21 @@ async def google_callback(
     Both cookies are written on the `RedirectResponse` itself. Setting them on an
     injected `Response` would silently drop them, since FastAPI discards that
     object whenever the handler returns a response of its own.
+
+    The `state` comparison uses `secrets.compare_digest` rather than `==`, which
+    short-circuits on the first differing byte and leaks the matching prefix
+    through response timing.
     """
 
     if error or not code or not state:
         logger.error("User google loging error.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google login error.",
+        )
+
+    if not state_cookie:
+        logger.error("State cookie missing.")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Google login error.",

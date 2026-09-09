@@ -96,6 +96,27 @@ async def base_user(db_session):
 
 
 @pytest.fixture
+async def user_password(db_session):
+    """A verified, active user with password."""
+
+    from app.auth.models import AuthProvider, UserModel
+
+    user = UserModel(
+        name="mike",
+        email="mike@mike.dev",
+        is_verified=True,
+        auth_provider=AuthProvider.GOOGLE_PASSWORD,
+    )
+    user.set_password("SuperSecretPassword123@")
+
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    return user
+
+
+@pytest.fixture
 async def authed_client(client, base_user):
     """A client whose requests resolve to `base_user`, bypassing real token checks."""
 
