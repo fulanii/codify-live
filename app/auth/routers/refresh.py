@@ -138,7 +138,7 @@ async def refresh_access_token(request: Request, response: Response, db: Annotat
     if refresh_data.is_revoked:
         refresh_tokens_query = select(RefreshTokenModel).where(RefreshTokenModel.user_id == refresh_data.user_id)
         refresh_token_rows = await db.execute(refresh_tokens_query)
-        all_user_refresh_tokens = refresh_token_rows.scalars.all()
+        all_user_refresh_tokens = refresh_token_rows.scalars().all()
 
         for refresh_token in all_user_refresh_tokens:
             refresh_token.is_revoked = True
